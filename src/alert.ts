@@ -187,14 +187,8 @@ export function mergeAlertSummaries(primary: AlertSummaryInput, fallback: AlertS
 
 async function notifyBestAvailable(pi: ExtensionAPI, title: string, message: string): Promise<void> {
   const target = await detectTerminalNotificationTarget(pi, process.env, process.stdout.isTTY === true)
-  if (sendTerminalNotification(title, message, process.env, process.stdout, target)) {
-    return
-  }
-
-  if (await notifyCurrentPlatform(pi, title, message)) {
-    return
-  }
-
+  sendTerminalNotification(title, message, process.env, process.stdout, target)
+  await notifyCurrentPlatform(pi, title, message)
   sendTerminalBell(process.stdout)
 }
 

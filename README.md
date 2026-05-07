@@ -27,26 +27,29 @@ Alert text prioritizes the most useful activity summary from the completed run:
 - read files
 - generic completion fallback
 
-Notification delivery is terminal-first, with OS fallback:
+Notification delivery fires all available transports in parallel:
 
 - **Ghostty**, **WezTerm**, and **rxvt-unicode**: OSC 777 terminal notifications
 - **iTerm2**: OSC 9 terminal notifications
 - **Kitty**: OSC 99 terminal notifications
 - **tmux**: supported via passthrough to supported outer terminals
-- **macOS** fallback: `osascript` with a native notification and the `Glass` sound
-- **Linux** fallback: `notify-send` from `libnotify`
-- **Windows** fallback: PowerShell and a `System.Windows.Forms.NotifyIcon` balloon notification
-- **Final fallback**: terminal bell (`BEL`) when no notification transport succeeds
+- **macOS**: `osascript` with a native notification and the `Glass` sound
+- **Linux**: `notify-send` from `libnotify`
+- **Windows**: PowerShell and a `System.Windows.Forms.NotifyIcon` balloon notification
+- **Every platform**: the terminal bell (`BEL`) is always sent, causing the
+  terminal window to flash in the taskbar when it is in the background (urgency
+  hint). This works in Alacritty, GNOME Terminal, XTerm, Windows Terminal, and
+  macOS Terminal.
 
 ## Platform support
 
-| Platform | Terminal-native notifications | Fallback |
-|---|---|---|
-| macOS | Yes, in supported terminals such as Ghostty, iTerm2, WezTerm, Kitty, and rxvt-unicode | `osascript` |
-| Linux | Yes, in supported terminals such as Ghostty, WezTerm, Kitty, and rxvt-unicode | `notify-send` |
-| Windows | Not the primary path today | PowerShell balloon notification |
+| Platform | Desktop notification |
+|---|---|
+| macOS | `osascript` |
+| Linux | `notify-send` |
+| Windows | PowerShell balloon notification |
 
-Terminal-native notifications require pi to be running inside a supported TTY terminal with the expected environment variables available. When running inside tmux, `pi-alert` attempts to detect the outer client terminal and forwards notifications through tmux passthrough when `allow-passthrough` is enabled. If tmux passthrough is unavailable or no supported terminal transport is detected, `pi-alert` falls back to the platform notification command, and finally to a terminal bell when no notification command succeeds.
+Terminal-native notifications require pi to be running inside a supported TTY terminal with the expected environment variables available. When running inside tmux, `pi-alert` attempts to detect the outer client terminal and forwards notifications through tmux passthrough when `allow-passthrough` is enabled.
 
 ### Linux notes
 
