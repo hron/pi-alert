@@ -38,6 +38,43 @@ Notification delivery is terminal-first, with OS fallback:
 - **Windows** fallback: PowerShell and a `System.Windows.Forms.NotifyIcon` balloon notification
 - **Final fallback**: terminal bell (`BEL`) when no notification transport succeeds
 
+## Integrating from other extensions
+
+Extensions can request user attention by emitting a `request-attention` event on
+the shared pi EventBus. pi-alert responds with a terminal bell and desktop
+notification.
+
+```typescript
+export default function (pi: ExtensionAPI) {
+  // Fire when your extension needs the user's attention
+  pi.events.emit("request-attention", {
+    message: "Review the generated output",
+  });
+}
+```
+
+The `message` field is optional — when omitted, pi-alert falls back to
+`"Agent finished its turn"`.
+
+### Example: pi-sandbox
+
+[pi-sandbox](https://github.com/carderne/pi-sandbox) uses this event to grab the
+user's attention when it blocks a tool call and shows an interactive permission
+prompt:
+
+```typescript
+async function showPermissionPrompt(ctx, title, options) {
+  if (!ctx.hasUI) return "abort";
+
+  pi.events.emit("request-attention", {
+    message: "Sandbox permission required",
+  });
+
+  const result = await ctx.ui.custom(/* ... */);
+  return result;
+}
+```
+
 ## Platform support
 
 | Platform | Terminal-native notifications | Fallback |
