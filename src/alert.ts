@@ -6,6 +6,21 @@ const APP_NAME = "pi"
 const FALLBACK_MESSAGE = "Agent finished its turn"
 const NOTIFICATION_TIMEOUT_MS = 5_000
 
+const ENABLE_FOCUS_REPORTING = "\x1b[?1004h"
+const DISABLE_FOCUS_REPORTING = "\x1b[?1004l"
+const FOCUS_IN = "\x1b[I"
+const FOCUS_OUT = "\x1b[O"
+
+export type FocusState = {
+  isFocused: boolean
+  hasReceivedFocusEvent: boolean
+}
+
+export function shouldSuppressForFocus(focus?: FocusState): boolean {
+  if (!focus) return false
+  return focus.hasReceivedFocusEvent && focus.isFocused
+}
+
 export type NotificationCommand = {
   command: string
   args: string[]
@@ -49,6 +64,39 @@ type AlertRunState = {
 
 export default function alertExtension(pi: ExtensionAPI) {
   let currentRun: AlertRunState | null = null
+  const focus: FocusState = { isFocused: true, hasReceivedFocusEvent: false }
+  let unsubscribeTerminalInput: (() => void) | null = null
+
+  pi.on("session_start", (_event, ctx) => {
+    if (!ctx.hasUI) return
+
+    process.stdout.write(ENABLE_FOCUS_REPORTING)
+
+    unsubscribeTerminalInput = ctx.ui.onTerminalInput((data) => {
+      const lastFocusIn = data.lastIndexOf(FOCUS_IN)
+      const lastFocusOut = data.lastIndexOf(FOCUS_OUT)
+
+      if (lastFocusIn > lastFocusOut) {
+        focus.hasReceivedFocusEvent = true
+        focus.isFocused = true
+        return { consume: true }
+      }
+
+      if (lastFocusOut > lastFocusIn) {
+        focus.hasReceivedFocusEvent = true
+        focus.isFocused = false
+        return { consume: true }
+      }
+
+      return undefined
+    })
+  })
+
+  pi.on("session_shutdown", () => {
+    unsubscribeTerminalInput?.()
+    unsubscribeTerminalInput = null
+    process.stdout.write(DISABLE_FOCUS_REPORTING)
+  })
 
   pi.on("agent_start", () => {
     currentRun = createRunState(Date.now())
@@ -87,7 +135,7 @@ export default function alertExtension(pi: ExtensionAPI) {
     const title = buildAlertTitle(ctx.cwd)
 
     currentRun = null
-    await notifyBestAvailable(pi, title, message)
+    await notifyBestAvailable(pi, title, message, focus)
   })
 }
 
@@ -185,7 +233,16 @@ export function mergeAlertSummaries(primary: AlertSummaryInput, fallback: AlertS
   }
 }
 
-async function notifyBestAvailable(pi: ExtensionAPI, title: string, message: string): Promise<void> {
+async function notifyBestAvailable(
+  pi: ExtensionAPI,
+  title: string,
+  message: string,
+  focus?: FocusState,
+): Promise<void> {
+  if (shouldSuppressForFocus(focus)) {
+    return
+  }
+
   const target = await detectTerminalNotificationTarget(pi, process.env, process.stdout.isTTY === true)
   if (sendTerminalNotification(title, message, process.env, process.stdout, target)) {
     return

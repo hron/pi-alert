@@ -38,6 +38,30 @@ Notification delivery is terminal-first, with OS fallback:
 - **Windows** fallback: PowerShell and a `System.Windows.Forms.NotifyIcon` balloon notification
 - **Final fallback**: terminal bell (`BEL`) when no notification transport succeeds
 
+### Focus-aware suppression
+
+`pi-alert` uses terminal focus reporting (DECSET 1004) to detect whether the
+terminal window is currently focused. When the terminal **is** focused, all
+notifications are suppressed — you're already looking at pi, so there's no need
+for a popup or bell.
+
+This works in terminals that support focus reporting:
+
+| Terminal | Focus reporting |
+|---|---|
+| Alacritty | ✅ |
+| Ghostty | ✅ |
+| iTerm2 | ✅ |
+| Kitty | ✅ |
+| WezTerm | ✅ |
+| Windows Terminal | ✅ |
+| XTerm | ✅ |
+| tmux | ⚠️ (passthrough when `allow-passthrough` is on) |
+
+> **Safe default:** If the terminal doesn't support focus reporting, no focus
+> events are received and notifications always fire — the same behavior as
+> before this feature was added.
+
 ## Platform support
 
 | Platform | Terminal-native notifications | Fallback |

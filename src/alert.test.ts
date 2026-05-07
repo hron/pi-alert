@@ -18,6 +18,7 @@ import {
   sanitizeTerminalNotificationText,
   sendTerminalBell,
   sendTerminalNotification,
+  shouldSuppressForFocus,
   summarizeAgentEndMessages,
   wrapTmuxPassthroughSequence,
 } from "./alert"
@@ -341,5 +342,32 @@ describe("buildNotificationCommands", () => {
 
   test("returns no commands for unsupported platforms", () => {
     expect(buildNotificationCommands("aix", "pi", "done")).toEqual([])
+  })
+})
+
+describe("shouldSuppressForFocus", () => {
+  test("returns false when no focus state is provided", () => {
+    expect(shouldSuppressForFocus(undefined)).toBeFalse()
+  })
+
+  test("returns false before any focus event is received", () => {
+    expect(
+      shouldSuppressForFocus({ isFocused: true, hasReceivedFocusEvent: false }),
+    ).toBeFalse()
+    expect(
+      shouldSuppressForFocus({ isFocused: false, hasReceivedFocusEvent: false }),
+    ).toBeFalse()
+  })
+
+  test("returns true when terminal is focused after focus events", () => {
+    expect(
+      shouldSuppressForFocus({ isFocused: true, hasReceivedFocusEvent: true }),
+    ).toBeTrue()
+  })
+
+  test("returns false when terminal is unfocused after focus events", () => {
+    expect(
+      shouldSuppressForFocus({ isFocused: false, hasReceivedFocusEvent: true }),
+    ).toBeFalse()
   })
 })
