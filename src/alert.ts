@@ -49,6 +49,19 @@ type AlertRunState = {
 
 export default function alertExtension(pi: ExtensionAPI) {
   let currentRun: AlertRunState | null = null
+  let currentCwd: string | undefined
+
+  pi.on("session_start", (_event, ctx) => {
+    currentCwd = ctx.cwd ?? undefined
+  })
+
+  pi.events.on("request-attention", async (payload) => {
+    const message = buildRequestAttentionMessage(payload)
+    const title = buildAlertTitle(currentCwd)
+
+    sendTerminalBell(process.stdout)
+    await notifyBestAvailable(pi, title, message)
+  })
 
   pi.on("agent_start", () => {
     currentRun = createRunState(Date.now())
@@ -518,6 +531,14 @@ export function buildAlertTitle(cwd: string | null | undefined): string {
   const normalizedCwd = cwd.replace(/[\\/]+$/, "") || cwd
   const rootDir = basename(normalizedCwd)
   return rootDir ? `${APP_NAME} — ${rootDir}` : APP_NAME
+}
+
+export function buildRequestAttentionMessage(payload: unknown): string {
+  if (payload && typeof payload === "object" && "message" in payload && typeof payload.message === "string") {
+    return payload.message
+  }
+
+  return FALLBACK_MESSAGE
 }
 
 export function buildAlertMessage(summary: AlertSummaryInput): string {

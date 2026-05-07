@@ -6,6 +6,7 @@ import {
   buildOsc777Sequence,
   buildOsc9Sequence,
   buildOsc99Sequences,
+  buildRequestAttentionMessage,
   buildTerminalNotificationSequences,
   buildWindowsNotificationScript,
   detectTerminalNotificationTargetFromEnv,
@@ -308,6 +309,27 @@ describe("mergeAlertSummaries", () => {
       readPaths: [],
       otherToolCalls: ["bash"],
     })
+  })
+})
+
+describe("buildRequestAttentionMessage", () => {
+  test("returns payload message when provided", () => {
+    expect(buildRequestAttentionMessage({ message: "Sandbox needs you" })).toBe("Sandbox needs you")
+  })
+
+  test("returns fallback when payload has no message", () => {
+    expect(buildRequestAttentionMessage({ other: true })).toBe("Agent finished its turn")
+  })
+
+  test("returns fallback when payload is not an object", () => {
+    expect(buildRequestAttentionMessage(null)).toBe("Agent finished its turn")
+    expect(buildRequestAttentionMessage(undefined)).toBe("Agent finished its turn")
+    expect(buildRequestAttentionMessage("string")).toBe("Agent finished its turn")
+  })
+
+  test("returns fallback when message is not a string", () => {
+    expect(buildRequestAttentionMessage({ message: 42 })).toBe("Agent finished its turn")
+    expect(buildRequestAttentionMessage({ message: null })).toBe("Agent finished its turn")
   })
 })
 
